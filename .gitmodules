@@ -1,0 +1,3 @@
+[submodule "GloVe"]
+	path = GloVe
+	url = https://github.com/mebrunet/GloVe
