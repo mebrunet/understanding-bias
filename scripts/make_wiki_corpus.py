@@ -63,7 +63,7 @@ with open(outname + ".meta.json", "w") as f:
     json.dump(metadata, f, indent=4)
 
 with open(outname + ".meta.txt", "w") as f:
-    del metadata["documents"]
+    del metadata["index"]
     for key, val in metadata.items():
         f.write(key)
         f.write(": ")
