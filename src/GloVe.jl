@@ -70,7 +70,8 @@ function load_model(embedding_path)
     V = length(vocab)
     W, b_w, U, b_u = load_bin_vectors(embedding_path, V)
     D = size(W, 2)
-    return (vocab=vocab, ivocab=ivocab, W=W, b_w=b_w, U=U, b_u=b_u, V=V, D=D, d=d)
+    return (vocab=vocab, ivocab=ivocab, W=W, b_w=b_w, U=U, b_u=b_u, V=V, D=D, d=d,
+        vocab_path=abspath(vocab_path), embedding_path=abspath(embedding_path))
 end
 
 

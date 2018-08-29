@@ -26,6 +26,10 @@ echo Building GloVe and training a toy embedding...
 make -C "$BASE_DIR/GloVe"
 scripts/embed.sh scripts/toy_embed.config
 
+# Evaluate annalogy performance
+echo Evaluating analogy performace...
+scripts/analogy.sh embeddings/vectors-C0-V20-W8-D25-R0.05-E15-S1.bin
+
 # Run tests
 echo Running tests
 ./test
