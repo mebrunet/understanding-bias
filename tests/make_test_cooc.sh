@@ -14,10 +14,6 @@ VOCAB_FILE=$RESULTS_DIR/vocab-C0-V20.txt
 TEST_CORPUS=$TEST_DIR/test_corpus.txt
 TEST_COOC=$TEST_DIR/test_cooc.bin
 
-if [[ ! -f $TEST_CORPUS ]]; then
-  head -n 100 $CORPUS_FILE > $TEST_CORPUS
-fi
+head -n 25 $CORPUS_FILE > $TEST_CORPUS
 
-if [[ ! -f $TEST_COOC ]]; then
-  $BUILD_DIR/cooccur -vocab-file $VOCAB_FILE -verbose 2 -window-size 8 -overflow-file $RESULTS_DIR/overflow < $TEST_CORPUS > $TEST_COOC
-fi
+$BUILD_DIR/cooccur -vocab-file $VOCAB_FILE -verbose 2 -window-size 8 -overflow-file $RESULTS_DIR/overflow < $TEST_CORPUS > $TEST_COOC
