@@ -1,3 +1,4 @@
-cd(abspath(@__DIR__))
+cd(@__DIR__)
 
 include("Corpora.test.jl")
+include("GloVe.test.jl")
