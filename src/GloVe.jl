@@ -222,4 +222,59 @@ function save_coocs(out_file::String, X::SparseMatrixCSC{Float64, Int64})
     end
 end
 
+
+# GloVe weighting function
+function f(x::Float64; max::Float64=100.0, alpha::Float64=0.75)::Float64
+    if x >= max
+        return 1.0
+    else
+        return (x/max)^alpha
+    end
+end
+
+
+# Pointwise loss
+function Li(W::AbstractArray, b_w::Array{Float64,1}, U::Array{Float64,2},
+            b_u::Array{Float64,1}, X::SparseMatrixCSC{Float64}, i::Int64)
+    (V, D) = size(U)
+    Xi = X[i, :].nzval
+    Ji = X[i, :].nzind
+    if length(Xi) == 0
+        return 0.0
+    end
+    diff = U[Ji, :] * W[i, :] + b_u[Ji] .+ b_w[i] - log.(Xi)
+    return sum(f.(Xi) .* diff.^2)
+end
+
+
+# Total loss
+function J(W::AbstractArray, b_w::Array{Float64,1}, U::Array{Float64,2},
+            b_u::Array{Float64,1}, X::SparseMatrixCSC{Float64})
+    (V, D) = size(U)
+    tot = 0.0
+    for i in 1:V
+        tot = tot + Li(W, b_w, U, b_u, X, i)
+    end
+    return tot
+end
+
+
+# Gradient of the pointwise loss w.r.t. Wi
+function ∇Li(W::Array{Float64,2}, b_w::Array{Float64,1},
+        U::Array{Float64,2}, b_u::Array{Float64,1}, X::SparseMatrixCSC{Float64,Int64}, i::Int64)::Array{Float64,1}
+    Xi = X[i, :].nzval; Ji = X[i, :].nzind;
+    diff = U[Ji, :] * W[i, :] + b_u[Ji] .+ b_w[i] - log.(Xi)
+    return ((2 * GloVe.f.(Xi) .* diff)' * U[Ji, :])'
+end
+
+
+# Hessian of the pointwise loss w.r.t. Wi
+function ∇²Li(U::Array{Float64,2}, X::SparseMatrixCSC{Float64,Int64},
+        i::Int64)::Array{Float64,2}
+    Xi = X[i, :].nzval; Ji = X[i, :].nzind;
+    temp = sqrt.(2.0 * GloVe.f.(Xi)) .* @view U[Ji, :]
+    return temp' * temp
+end
+
+
 end
