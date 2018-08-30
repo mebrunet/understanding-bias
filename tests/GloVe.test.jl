@@ -86,5 +86,33 @@ using ForwardDiff
 
     end
 
+    @testset "Influence Function approximation" begin
+        document = "the quick brown fox jumped over the lazy dog"
+        X = GloVe.load_cooc(full_cooc_path, M.V)
+        deltas = GloVe.compute_IF_deltas(document, M, X)
+        # Check only words in document are affected
+        @test Set(keys(deltas)) == Set([M.vocab[word].index for word in split(document)])
+        all_non_zeros = true
+        for (idx, delta) in pairs(deltas)
+            all_non_zeros &= (length(delta) == M.D) && (delta != zeros(M.D))
+        end
+        @test all_non_zeros
+
+        # Now test more efficient version
+        target_words = split("jumped dog excluded")
+        target_indices = [M.vocab[word].index for word in target_words]
+        H = GloVe.inv_hessians_for(target_indices, M, X)
+        G = GloVe.gradients_for(target_indices, M, X)
+
+        select_deltas = GloVe.compute_IF_deltas(document, M, X, target_indices, H, G)
+        @test length(select_deltas) == 2  # for "jumped" and "dog"
+
+        same_values = true
+        for (idx, delta) in pairs(select_deltas)
+            same_values &= delta == deltas[idx]
+        end
+        @test same_values
+    end
+
 
 end

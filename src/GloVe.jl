@@ -2,6 +2,7 @@
 module GloVe
 
 using SparseArrays
+using LinearAlgebra
 
 export CREC, WORD_INFO
 
@@ -276,5 +277,64 @@ function ∇²Li(U::Array{Float64,2}, X::SparseMatrixCSC{Float64,Int64},
     return temp' * temp
 end
 
+
+# Compute change in embedding due to document removal
+function compute_IF_deltas(document::String, M, X::SparseMatrixCSC)
+    Y = GloVe.doc2cooc(document, M.vocab, M.d)  # The perturbation
+    affected_inds = unique(Y.rowval)  # Set of affected word vectors
+    N = length(affected_inds)  # Number of vectors that will change
+    deltas = Dict{Int64,Array{Float64,1}}()  # Hash deltas by word index
+    if N != 0
+        X̃ = dropzeros(max.(0.0, X - Y))  # non-neg catch incase doc out of corpus
+        for idx in affected_inds
+            gi = ∇Li(M.W, M.b_w, M.U, M.b_u, X, idx)  # original gradient
+            Hi = ∇²Li(M.U, X, idx)  # original hessian
+            g̃i = ∇Li(M.W, M.b_w, M.U, M.b_u, X̃, idx)  # perturbed gradient
+            deltas[idx] = inv(Hi) * (gi - g̃i)
+        end
+    end
+    return deltas
+end
+
+
+# Speed-up: avoid computing anything you don't need to
+function compute_IF_deltas(document::String, M, X::SparseMatrixCSC,
+        target_indices::Array{Int64,1}, inv_hessians::Dict{Int64,Array{Float64,2}},
+        gradients::Dict{Int64,Array{Float64,1}})
+    Y = GloVe.doc2cooc(document, M.vocab, M.d)
+    select_affected_inds = intersect(unique(Y.rowval), target_indices)  # consider less
+    N = length(select_affected_inds)  # Number of vectors that will change
+    deltas = Dict{Int64,Array{Float64,1}}() # Deltas for each word vector
+    if N != 0
+        X̃ = dropzeros(max.(0.0, X - Y))  # non-neg catch incase doc out of corpus
+        for idx in select_affected_inds
+            g̃i = ∇Li(M.W, M.b_w, M.U, M.b_u, X̃, idx)
+            deltas[idx] = inv_hessians[idx] * (gradients[idx] - g̃i)
+        end
+    end
+    return deltas
+end
+
+
+# Precompute a batch of gradients
+function gradients_for(target_indices, M, X)
+    num_words = length(target_indices)
+    G = Dict{Int64,Array{Float64,1}}()
+    for i in target_indices
+        G[i] = ∇Li(M.W, M.b_w, M.U, M.b_u, X, i)
+    end
+    return G
+end
+
+
+# Precompute a batch of inverse hessians
+function inv_hessians_for(target_indices, M, X)
+    num_words = length(target_indices)
+    H = Dict{Int64,Array{Float64,2}}()
+    for i in target_indices
+        H[i] = inv(∇²Li(M.U, X, i))
+    end
+    return H
+end
 
 end

@@ -1,4 +1,4 @@
-const WORD_SETS =
+const WEAT_WORD_SETS =
 (
 science_arts=(
 S=("science","technology","physics","chemistry","einstein","nasa","experiment","astronomy"),
