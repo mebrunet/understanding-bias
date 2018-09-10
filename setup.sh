@@ -2,7 +2,7 @@
 
 # Setup repository after cloning
 
-BASE_DIR="$(dirname $0)/.."
+BASE_DIR=$(dirname $0)
 
 # Initialize and update submodules
 echo Initializing git submodules...
