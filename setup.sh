@@ -10,7 +10,7 @@ git submodule init && git submodule update
 
 # Setup python environment
 echo Setting up python environment...
-virtualenv -p python3 venv
+virtualenv -p python3 venv || python3 -m venv venv
 venv/bin/pip install -r requirements.txt
 
 # Setup julia environment
