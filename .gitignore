@@ -9,3 +9,6 @@ venv
 
 # Scratch
 src/scratch.*
+
+# Utils
+push

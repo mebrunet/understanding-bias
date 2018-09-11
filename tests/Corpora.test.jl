@@ -4,6 +4,7 @@ using Test
 
     include("../src/Corpora.jl")
     wiki_path = "../corpora/simplewikiselect"
+    nyt_path = "../corpora/nytselect"
 
     @testset "Corpus constructor" begin
         global c = Corpora.Corpus(wiki_path)
@@ -23,6 +24,20 @@ using Test
 
         open(c.corpus_path) do f
             @test line == Corpora.get_text(f, c, target)
+        end
+    end
+
+    if isfile("$nyt_path.txt")
+        @testset "NYT corpus" begin
+            nyt = Corpora.Corpus(nyt_path)
+            target = 101
+            line = ""
+            open(nyt.corpus_path) do f
+                for i in 1:target
+                    line = readline(f)
+                end
+            end
+            @test line == Corpora.get_text(nyt, target)
         end
     end
 
