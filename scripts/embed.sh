@@ -75,7 +75,7 @@ if [[ ! -f ${SAVE_FILE}.bin ]]; then
   $BUILD_DIR/shuffle -memory $MEMORY -verbose $VERBOSE -temp-file $TEMP_FILE -seed $SEED < $COOC_FILE > $SHUF_FILE
 
   # Train
-  $BUILD_DIR/glove -save-file $SAVE_FILE -threads $NUM_THREADS -input-file $SHUF_FILE -x-max $X_MAX -iter $MAX_ITER -checkpoint-every 0 -vector-size $VECTOR_SIZE -binary 1 -vocab-file $VOCAB_FILE -verbose $VERBOSE -seed $SEED
+  $BUILD_DIR/glove -save-file $SAVE_FILE -threads $NUM_THREADS -input-file $SHUF_FILE -eta $ETA -iter $MAX_ITER -checkpoint-every 0 -vector-size $VECTOR_SIZE -binary 1 -vocab-file $VOCAB_FILE -verbose $VERBOSE -seed $SEED
 
   # Clean up
   rm $SHUF_FILE
