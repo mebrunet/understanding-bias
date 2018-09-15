@@ -25,6 +25,10 @@ using Test
         open(c.corpus_path) do f
             @test line == Corpora.get_text(f, c, target)
         end
+
+        indices = [15, 100, 789]
+        texts = [Corpora.get_text(c, idx) for idx in indices]
+        @test texts == Corpora.get_texts(c, indices)
     end
 
     if isfile("$nyt_path.txt")

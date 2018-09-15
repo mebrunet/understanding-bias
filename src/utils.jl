@@ -28,3 +28,33 @@ function make_test_docs(weat_word_set)
     TB = zip_word_sets(weat_word_set.T, weat_word_set.B)
     return (SA=SA, SB=SB, TA=TA, TB=TB)
 end
+
+
+# Regex Helper
+function extract(string, regex; trim=(0,0), cast=nothing)
+    m = match(regex, string)
+    tmp = nothing
+    if (m != nothing)
+        tmp = m.match[1+trim[1]:end-trim[2]]
+        if (cast != nothing)
+            tmp = parse(cast, tmp)
+        end
+    end
+    return tmp
+end
+
+
+# Get file info from naming convention
+function fileinfo(filepath)
+    corpus = extract(filepath, r"-C[0-9]+-", trim=(2,1), cast=Int64)
+    min_vocab = extract(filepath, r"-V[0-9]+-", trim=(2,1), cast=Int64)
+    window = extract(filepath, r"-W[0-9]+-", trim=(2,1), cast=Int64)
+    dimension = extract(filepath, r"-D[0-9]+-", trim=(2,1), cast=Int64)
+    eta = extract(filepath, r"-R[0-9]+.[0-9]+-", trim=(2,1), cast=Float64)
+    max_iters = extract(filepath, r"-E[0-9]+-", trim=(2,1), cast=Int64)
+    seed = extract(filepath, r"-S[0-9]+.", trim=(2,1), cast=Int64)
+    tmp = extract(filepath, r".[0-9]{3}.bin$", trim=(1, 4), cast=Int64)
+    iters = tmp == nothing ? max_iters : tmp
+    return (corpus=corpus, min_vocab=min_vocab, window=window, dimension=dimension,
+            eta=eta, max_iters=max_iters, seed=seed, iters=iters)
+end

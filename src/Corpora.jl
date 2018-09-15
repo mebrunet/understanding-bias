@@ -2,6 +2,7 @@ module Corpora
 
 using JSON
 
+
 struct Corpus
     corpus_path::String
     meta_path::String
@@ -44,6 +45,7 @@ struct Corpus
     end
 end
 
+
 function get_text(corpus::Corpus, idx::Integer)
     meta = corpus.index[idx]
     open(corpus.corpus_path) do f
@@ -52,10 +54,18 @@ function get_text(corpus::Corpus, idx::Integer)
     end
 end
 
+
 function get_text(io::IO, corpus::Corpus, idx::Integer)
     meta = corpus.index[idx]
     seek(io, meta["byte"])
     return readline(io)
+end
+
+
+function get_texts(corpus::Corpus, indices)
+    open(corpus.corpus_path) do f
+        return [get_text(f, corpus, idx) for idx in indices]
+    end
 end
 
 end  # end module

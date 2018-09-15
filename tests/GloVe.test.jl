@@ -58,6 +58,27 @@ using ForwardDiff
         rm(test_path)
     end
 
+    @testset "Cooc perturbation" begin
+        V = 100
+        test_path = "test_cooc_2.tmp"
+        pert_path = "test_pert.tmp"
+
+        X = 100 * sprand(V, V, 0.5)
+        GloVe.save_coocs(test_path, X)
+        δX = sprand(V, V, 0.05)
+
+        GloVe.perturb_coocs(test_path, pert_path, -δX)
+        X1 = GloVe.load_cooc(pert_path, V)
+        Y = X - δX
+        Y[Y .< 0] .= 0
+        dropzeros(Y)
+
+        @test isapprox(X1, Y)
+
+        rm(pert_path)
+        rm(test_path)
+    end
+
     @testset "Gradients and Hessians" begin
         ∇ = ForwardDiff.gradient
         ∇² = ForwardDiff.hessian

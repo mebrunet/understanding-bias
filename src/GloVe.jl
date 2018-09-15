@@ -224,6 +224,39 @@ function save_coocs(out_file::String, X::SparseMatrixCSC{Float64, Int64})
 end
 
 
+# Stream co-occurrences, adding the perturbations
+function perturb_coocs(in_file::String, out_file::String,
+        X::SparseMatrixCSC{Float64, Int64})::Int64
+    local n_perts = 0
+    local i::Int32
+    local j::Int32
+    local x::Float64
+    local Xij::Float64
+    open(in_file) do in_io
+        open(out_file, "w") do out_io
+            while !eof(in_io)
+                i = read(in_io, Int32); j = read(in_io, Int32); x = read(in_io, Float64)
+                Xij = X[i,j]
+                if (Xij != 0.0)
+                    n_perts += 1
+                    if (x + Xij > 0.0) # Don't write zeros/neg; causes error
+                        write(out_io, i)
+                        write(out_io, j)
+                        write(out_io, x + Xij)
+                    end
+                else
+                    write(out_io, i)
+                    write(out_io, j)
+                    write(out_io, x)
+                end
+            end
+        end
+    end
+    return n_perts
+end
+
+
+
 # GloVe weighting function
 function f(x::Float64; max::Float64=100.0, alpha::Float64=0.75)::Float64
     if x >= max
