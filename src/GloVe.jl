@@ -76,6 +76,19 @@ function load_model(embedding_path)
 end
 
 
+# Convenience wrapper to simplify loading
+function load_model(embedding_path, vocab_path)
+    vocab, ivocab = load_vocab(vocab_path)
+    d = parse(Int64, match(r"-W[0-9]+", embedding_path).match[3:end])  # window
+    V = length(vocab)
+    W, b_w, U, b_u = load_bin_vectors(embedding_path, V)
+    D = size(W, 2)
+    return (vocab=vocab, ivocab=ivocab, W=W, b_w=b_w, U=U, b_u=b_u, V=V, D=D, d=d,
+        vocab_path=abspath(vocab_path), embedding_path=abspath(embedding_path))
+end
+
+
+
 # Save vectors in a text format (useful for running annalogy tests)
 function save_text_vectors(filename, W, idx2str)
     (V, D) = size(W)
@@ -347,6 +360,25 @@ function compute_IF_deltas(document::String, M, X::SparseMatrixCSC,
     end
     return deltas
 end
+
+
+# Where we've already loaded the perturbation as a cooc matrix
+function compute_IF_deltas(Y::SparseMatrixCSC, M, X::SparseMatrixCSC,
+        target_indices::Array{Int64,1}, inv_hessians::Dict{Int64,Array{Float64,2}},
+        gradients::Dict{Int64,Array{Float64,1}})
+    select_affected_inds = intersect(unique(Y.rowval), target_indices)  # consider less
+    N = length(select_affected_inds)  # Number of vectors that will change
+    deltas = Dict{Int64,Array{Float64,1}}() # Deltas for each word vector
+    if N != 0
+        X̃ = dropzeros(max.(0.0, X - Y))  # non-neg catch incase doc out of corpus
+        for idx in select_affected_inds
+            g̃i = ∇Li(M.W, M.b_w, M.U, M.b_u, X̃, idx)
+            deltas[idx] = inv_hessians[idx] * (gradients[idx] - g̃i)
+        end
+    end
+    return deltas
+end
+
 
 
 # Precompute a batch of gradients
