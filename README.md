@@ -1,5 +1,5 @@
 # Understanding Bias in Word Embeddings
-Code accompanying the paper "Understanding Bias in Word Embeddings"
+Code accompanying the paper "Understanding the Origins of Bias in Word Embeddings"
 
 ## Usage
 Install prerequisite dependencies:
@@ -12,4 +12,4 @@ git clone https://github.com/mebrunet/understanding-bias.git
 cd understanding-bias
 ./setup.sh
 ```
-This will install further dependencies, download a small corpus, and run a set of tests. 
+This will install further dependencies, download a small corpus, and run a set of tests.

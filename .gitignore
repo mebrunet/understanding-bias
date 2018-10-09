@@ -12,3 +12,6 @@ src/scratch.*
 
 # Utils
 push
+
+# OS
+.DS_store
