@@ -4,7 +4,7 @@ Code accompanying the paper "Understanding the Origins of Bias in Word Embedding
 ## Usage
 Install prerequisite dependencies:
 - python 3 / pip / virtual-environment
-- julia (version >= 0.7.0)
+- [julia](https://julialang.org/downloads/) (version >= 0.7.0)
 
 Clone the repository, then run the setup script:
 ```
