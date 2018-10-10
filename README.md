@@ -1,5 +1,5 @@
 # Understanding Bias in Word Embeddings
-Code accompanying the paper "Understanding the Origins of Bias in Word Embeddings"
+Code accompanying the paper "[Understanding the Origins of Bias in Word Embeddings](https://arxiv.org/abs/1810.03611)"
 
 ## Usage
 Install prerequisite dependencies:
