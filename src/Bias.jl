@@ -1,6 +1,9 @@
 module Bias
 
-using LinearAlgebra, Statistics, Random
+using LinearAlgebra
+using Statistics
+using Random
+using SparseArrays
 
 include("word_sets.jl")
 
@@ -14,8 +17,13 @@ function get_weat_idx_set(word_set::NamedTuple, vocab::Dict)
 end
 
 
-function normalize_rows(X::Array{Float64,2})
+function normalize_rows(X::AbstractArray)
     return mapslices(normalize, X, dims=2)
+end
+
+
+function normalize_rows(X::SparseMatrixCSC)
+    return mapslices(normalize, X, dims=1)'
 end
 
 
@@ -45,6 +53,15 @@ function effect_size(W, weat_idx_set::NamedTuple)
     B = W[weat_idx_set.B, :]
     return effect_size(S, T, A, B)
 end
+
+function effect_size(X::SparseMatrixCSC, weat_idx_set::NamedTuple)
+    S = X[:, weat_idx_set.S]
+    T = X[:, weat_idx_set.T]
+    A = X[:, weat_idx_set.A]
+    B = X[:, weat_idx_set.B]
+    return effect_size(S, T, A, B)
+end
+
 
 
 # Helper to compute effect size after changes to the embedding

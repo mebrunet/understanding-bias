@@ -46,13 +46,13 @@ end
 
 # Get file info from naming convention
 function fileinfo(filepath)
-    corpus = extract(filepath, r"-C[0-9]+-", trim=(2,1), cast=Int64)
-    min_vocab = extract(filepath, r"-V[0-9]+-", trim=(2,1), cast=Int64)
-    window = extract(filepath, r"-W[0-9]+-", trim=(2,1), cast=Int64)
-    dimension = extract(filepath, r"-D[0-9]+-", trim=(2,1), cast=Int64)
-    eta = extract(filepath, r"-R[0-9]+.[0-9]+-", trim=(2,1), cast=Float64)
-    max_iters = extract(filepath, r"-E[0-9]+-", trim=(2,1), cast=Int64)
-    seed = extract(filepath, r"-S[0-9]+.", trim=(2,1), cast=Int64)
+    corpus = extract(filepath, r"C[0-9]+", trim=(1,0), cast=Int64)
+    min_vocab = extract(filepath, r"V[0-9]+", trim=(1,0), cast=Int64)
+    window = extract(filepath, r"W[0-9]+", trim=(1,0), cast=Int64)
+    dimension = extract(filepath, r"D[0-9]+", trim=(1,0), cast=Int64)
+    eta = extract(filepath, r"R[0-9]+.[0-9]+", trim=(1,0), cast=Float64)
+    max_iters = extract(filepath, r"E[0-9]+", trim=(1,0), cast=Int64)
+    seed = extract(filepath, r"S[0-9]+", trim=(1,0), cast=Int64)
     tmp = extract(filepath, r".[0-9]{3}.bin$", trim=(1, 4), cast=Int64)
     iters = tmp == nothing ? max_iters : tmp
     return (corpus=corpus, min_vocab=min_vocab, window=window, dimension=dimension,
