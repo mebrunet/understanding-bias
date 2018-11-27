@@ -42,27 +42,30 @@ class TextCorpus(object):
             metadata = json.load(f)
 
         self.index = metadata['index']
-        self.num_documents = metadata['num_documents']
         self.textfile = textfile
-        self.without = sorted(set(without), reverse=True)  # Filter line number
+        self.without = without   # Filter line number
         self.rs = npr.RandomState(seed)
-        self.order = np.arange(self.num_documents)
-        if shuffle:
-            self.rs.shuffle(self.order)
-
         self.shuffled = shuffle
+
+        # Build a document ordering
+        self.doc_order = []
+        skips = sorted(set(without), reverse=True)
+        next_skip = skips.pop() if len(skips) > 0 else -1
+        for i in range(metadata['num_documents']):
+            if i == next_skip:
+                next_skip = skips.pop() if len(skips) > 0 else -1
+            else:
+                self.doc_order.append(i)
+
+        if shuffle:
+            self.rs.shuffle(self.doc_order)
 
     def __iter__(self):
         with open(self.textfile, 'r', encoding='utf-8') as f:
-            next_skip = self.without.pop() if len(self.without) > 0 else -1
-            for document_num in self.order:
-                if document_num == next_skip:
-                    skips_left = len(self.without)
-                    next_skip = self.without.pop() if skips_left > 0 else -1
-                else:
-                    f.seek(self.index[document_num]['byte'])
-                    text = f.readline().strip()
-                    yield text.split(' ')
+            for document_num in self.doc_order:
+                f.seek(self.index[document_num]['byte'])
+                text = f.readline().strip()
+                yield text.split(' ')
 
 
 if __name__ == '__main__':
@@ -83,7 +86,7 @@ if __name__ == '__main__':
                         format='%(asctime)s : %(levelname)s : %(message)s',
                         level=logging.INFO)
 
-    for seed in range(1, 6):
+    for seed in range(1, 4):
         params = {'size': 200, 'window': 8, 'min_count': 15, 'seed': seed}
         print('Embedding with params', params, flush=True)
         print('Omitting', pert_type, ' (', len(omit), 'documents )')
