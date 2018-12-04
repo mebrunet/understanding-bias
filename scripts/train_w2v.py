@@ -50,10 +50,10 @@ class TextCorpus(object):
         # Build a document ordering
         self.doc_order = []
         skips = sorted(set(without), reverse=True)
-        next_skip = skips.pop() if len(skips) > 0 else -1
+        next_skip = skips.pop() - 1 if len(skips) > 0 else -1  # convert to 0-index
         for i in range(metadata['num_documents']):
             if i == next_skip:
-                next_skip = skips.pop() if len(skips) > 0 else -1
+                next_skip = skips.pop() - 1 if len(skips) > 0 else -1
             else:
                 self.doc_order.append(i)
 
