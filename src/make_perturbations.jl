@@ -9,6 +9,7 @@ using Statistics
 using SparseArrays
 using LinearAlgebra
 using Random
+import JSON
 
 include("Corpora.jl")
 include("GloVe.jl")
@@ -45,7 +46,7 @@ function load_df(target, bias_col=:ΔBIF_1)
     for f in readdir(diff_bias_dir)
         if occursin(Regex(target), f)
             i += 1
-            tmp = sort(CSV.read(joinpath(diff_bias_dir, f)), :doc_num)
+            tmp = sort(readtable(joinpath(diff_bias_dir, f)), :doc_num)
             if (i == 1)
                 df[:doc_num] = tmp[:doc_num]
             end
@@ -76,20 +77,23 @@ function make_perturbations(target, bias_col=:ΔBIF_1, dir_name="B1")
     out_dir = joinpath(pert_dir, dir_name)
     mkpath(out_dir)
     df = load_df(target, bias_col)
+    CSV.write(joinpath(out_dir, "diff_bias.csv"), df)
     sorted = sort(df[[:ΔBIF_μ, :doc_num]])
+    pert_map = Dict("baseline" => [])
 
     for N in set_sizes
         # Correcting Articles
         name = "correct_$(N)_1"
         article_ids, biases = sorted[:doc_num][1:N], sorted[:ΔBIF_μ][1:N]
         make_perturbation(name, article_ids, biases, out_dir)
+        pert_map[name] = article_ids
 
         # Aggravating Articles
         name = "aggravate_$(N)_1"
-
         article_ids = sorted[:doc_num][end-(N-1):end]
         biases = sorted[:ΔBIF_μ][end-(N-1):end]
         make_perturbation(name, article_ids, biases, out_dir)
+        pert_map[name] = article_ids
 
         # Random
         all_article_ids = Array{Int64}(df[:doc_num])
@@ -98,8 +102,14 @@ function make_perturbations(target, bias_col=:ΔBIF_1, dir_name="B1")
             article_ids = shuffle(all_article_ids)[1:N]
             biases = [df[:ΔBIF_μ][df[:doc_num] .== id][1] for id in article_ids]
             make_perturbation(name, article_ids, biases, out_dir)
+            pert_map[name] = article_ids
         end
     end
+    
+    open(joinpath(out_dir, "pert_map.json"), "w") do f
+        JSON.print(f, pert_map)
+    end
+
     return out_dir
 end
 
