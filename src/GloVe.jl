@@ -168,6 +168,23 @@ function load_cooc(filename, V, target_inds::Array{Int64,1})::SparseMatrixCSC{Fl
 end
 
 
+# Load only the most common words
+function load_cooc(filename, V, max_ind::Int64)::SparseMatrixCSC{Float64, Int64}
+    I = Array{Int64,1}()
+    J = Array{Int64,1}()
+    X = Array{Float64,1}()
+    open(filename) do f
+        while (!eof(f))
+            (i, j, x) = read_cooc(f)
+            if (i <= max_ind || j <= max_ind)
+                push!(I, i); push!(J, j); push!(X, x)
+            end
+        end
+    end
+    return sparse(I, J, X, V, V)
+end
+
+
 # Replicated the GloVe preprocessing
 function parse_coocs(text::String, vocab::Dict{String,GloVe.WORD_INFO}, window::Int64)::Tuple{Array{Int64,1},Array{Int64,1},Array{Float64,1}}
     words = split(text)

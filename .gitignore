@@ -6,6 +6,7 @@ deps/deps.jl
 
 # Python
 venv
+*.pyc
 
 # Scratch
 src/scratch.*

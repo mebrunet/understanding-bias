@@ -54,11 +54,12 @@ function effect_size(W, weat_idx_set::NamedTuple)
     return effect_size(S, T, A, B)
 end
 
-function effect_size(X::SparseMatrixCSC, weat_idx_set::NamedTuple)
-    S = X[:, weat_idx_set.S]
-    T = X[:, weat_idx_set.T]
-    A = X[:, weat_idx_set.A]
-    B = X[:, weat_idx_set.B]
+function effect_size(X::SparseMatrixCSC, weat_idx_set::NamedTuple; limit_scope=false)
+    indices = [i for inds in weat_idx_set for i in inds]
+    S = limit_scope ? X[indices, weat_idx_set.S] : X[:, weat_idx_set.S]
+    T = limit_scope ? X[indices, weat_idx_set.T] : X[:, weat_idx_set.T]
+    A = limit_scope ? X[indices, weat_idx_set.A] : X[:, weat_idx_set.A]
+    B = limit_scope ? X[indices, weat_idx_set.B] : X[:, weat_idx_set.B]
     return effect_size(S, T, A, B)
 end
 
