@@ -109,10 +109,11 @@ if __name__ == '__main__':
     test_words_path = get_arg(2, TEST_WORDS_PATH)
     filename = path.basename(model_path)
     scenario = filename.split('_')[1]
+    intensity = filename.split('_')[2]
     seed = filename[0:-4].split('-')[-1]
     w2v = Word2Vec.load(model_path)
     acc_report = w2v.wv.accuracy(test_words_path)
     acc = percent_accuracy(acc_report)
     es = calc_effect_size(WEAT_1_words["S"], WEAT_1_words["T"],
                           WEAT_1_words["A"], WEAT_1_words["B"], w2v.wv)
-    print(",".join([scenario, seed, str(w2v.corpus_count), str(acc), str(es)]))
+    print(",".join([scenario, intensity, seed, str(w2v.corpus_count), str(acc), str(es)]))

@@ -86,7 +86,7 @@ if __name__ == '__main__':
                         format='%(asctime)s : %(levelname)s : %(message)s',
                         level=logging.INFO)
 
-    for seed in range(1, 4):
+    for seed in range(1, 6):
         params = {'size': 200, 'window': 8, 'min_count': 15, 'seed': seed}
         print('Embedding with params', params, flush=True)
         print('Omitting', pert_type, ' (', len(omit), 'documents )')
