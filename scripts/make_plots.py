@@ -13,15 +13,25 @@ try:
     parser.add_argument("indir")
     parser.add_argument("outdir")
     parser.add_argument('--show', action='store_true')
+    parser.add_argument('--no-hist', action='store_true')
+    parser.add_argument('--no-rand', action='store_true')
+    parser.add_argument('--reverse', action='store_true')
     args = parser.parse_args()
     TARGET_DIR = args.indir
     SAVE_DIR = args.outdir
     SHOW_PLOTS = args.show
+    NO_HIST = args.no_hist
+    NO_RAND = args.no_rand
+    REVERSE = args.reverse
 
-except:
+except Exception as e:
+    print(e)
     TARGET_DIR = "results/perturbations/C0-V15-W8-D75-R0.05-E300-B2"
     SAVE_DIR = "results/figures"
     SHOW_PLOTS = True
+    NO_HIST = False
+    NO_RAND = False
+    REVERSE = False
 
 print(TARGET_DIR)
 CORPUS_NUM = int(re.compile("C[0-9]+-V").search(TARGET_DIR).group(0)[1:-2])
@@ -92,7 +102,7 @@ def make_comparision_plot(preds, trues, random=False):
     base_weat = np.unique(preds["B"])
     base_mean = np.mean(base_weat)
     not random and print("WEAT - μ:", base_mean, "σ:", np.std(base_weat))
-    if base_mean < 0.25:
+    if base_mean < 0.25 or REVERSE:
         positions = positions[::-1]  # Handle Wiki - WEAT2
 
     pos = D * positions.index(("baseline", 0)) + d/2
@@ -224,7 +234,7 @@ if __name__ == "__main__":
     groups = dict(list(preds_grouped))
     groups.get(("correct", 10))
 
-    make_histogram()
+    not NO_HIST and make_histogram()
     make_comparision_plot(preds, trues, random=False)
-    make_comparision_plot(preds, trues, random=True)
+    not NO_RAND and make_comparision_plot(preds, trues, random=True)
     make_correlation_plot(preds, trues)

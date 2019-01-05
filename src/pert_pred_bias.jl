@@ -9,6 +9,7 @@ include("Bias.jl")
 target = get(ARGS, 1, "C0-V15-W8-D75-R0.05-E300")
 pert_dir = get(ARGS, 2, "results/perturbations")
 embedding_dir = get(ARGS, 3, "embeddings")
+target_biases = get(ARGS, 4, 1:length(Bias.WEAT_WORD_SETS))
 
 
 function pre_compute(M, X, word_indices)
@@ -56,7 +57,8 @@ function main()
             H, G = pre_compute(M, X, all_weat_indices)
             effect_sizes = [Bias.effect_size(M.W, set) for set in weat_idx_sets]
 
-            for i in 1:length(Bias.WEAT_WORD_SETS)
+            for j in target_biases
+                i = parse(Int, j)
                 target_dir = joinpath(pert_dir, target * "-B$i")
                 if (n == 1)
                     open(joinpath(target_dir, "predicted_change.csv"), "w") do out_io

@@ -9,7 +9,7 @@ include("Bias.jl")
 target = get(ARGS, 1, "C0-V15-W8-D75-R0.05-E300")
 pert_dir = get(ARGS, 2, "results/perturbations")
 embedding_dir = get(ARGS, 3, "embeddings")
-
+target_biases = get(ARGS, 4, 1:length(Bias.WEAT_WORD_SETS))
 
 function main()
     vocab_path = abspath(joinpath(embedding_dir, "vocab-$(split(target, "-W")[1]).txt"))
@@ -20,7 +20,8 @@ function main()
     weat_idx_sets = [Bias.get_weat_idx_set(set, vocab) for set in Bias.WEAT_WORD_SETS]
     all_weat_indices = unique([i for set in weat_idx_sets for inds in set for i in inds])
 
-    for i in 1:length(Bias.WEAT_WORD_SETS)
+    for j in target_biases
+        i = parse(Int, j)
         target_dir = joinpath(pert_dir, target * "-B$i")
         open(joinpath(target_dir, "true_change.csv"), "w") do out_io
             headers = ["filename", "pert_type", "pert_size", "pert_run", "seed", "trueB̃"]

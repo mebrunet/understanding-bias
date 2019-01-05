@@ -83,13 +83,13 @@ begin
 
     for N in set_sizes
         # Correcting Articles
-        name = "ppmi_correct_$(N)_1"
+        name = "correct_$(N)_1"
         article_ids, biases = sorted_df[:doc_num][1:N], sorted_df[:ΔB1][1:N]
         make_perturbation(name, article_ids, biases, out_dir)
         pert_map[name] = article_ids
 
         # Aggravating Articles
-        name = "ppmi_aggravate_$(N)_1"
+        name = "aggravate_$(N)_1"
         article_ids = sorted_df[:doc_num][end-(N-1):end]
         biases = sorted_df[:ΔB1][end-(N-1):end]
         make_perturbation(name, article_ids, biases, out_dir)
