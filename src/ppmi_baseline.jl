@@ -13,7 +13,7 @@ include("PPMI.jl")
 vocab_path = get(ARGS, 1, "embeddings/vocab-C0-V15.txt")
 corpus_path = get(ARGS, 2, "corpora/simplewikiselect.txt")
 cooc_path = get(ARGS, 3, "embeddings/cooc-C0-V15-W8.bin")
-out_file_path = get(ARGS, 4, "results/ppmi_baseline_wiki.csv")
+out_file_path = get(ARGS, 4, "results/ppmi_perturbations/ppmi_baseline_wiki.csv")
 pert_dir = get(ARGS, 5, "results/ppmi_perturbations")
 
 window = extract(cooc_path, r"-W[0-9]*\.", trim=(2,1), cast=Int)
@@ -47,7 +47,7 @@ open(out_file_path, "w") do out_file
             δX = GloVe.doc2cooc(doc_text, vocab, window)
             D̃ = PPMI.make_ppmi_matrix(X, δX, vocab, ivocab, T, r)
             B̃ = [Bias.effect_size(D̃, idx_set) for idx_set in weat_idx_sets]
-            println(out_file, join([string(x) for x in [doc_num; B̃ - B]], ", "))
+            println(out_file, join([string(x) for x in [doc_num; B - B̃]], ", "))
             results[:, doc_num] = B̃
 
         end
@@ -101,6 +101,7 @@ begin
     end
 end
 
+
 function make_config_file(target, out_dir)
     params = fileinfo("-" * target * "-")
     open(joinpath(out_dir, "config.txt"), "w") do f
@@ -114,3 +115,60 @@ function make_config_file(target, out_dir)
 end
 
 make_config_file(target, out_dir)
+
+
+#### Analyse the perturbations - again only Bias 1
+function ppmi_change(folder)
+    println("baseline, 0, $(B[1])")
+    df = DataFrame(pert_type="baseline", pert_size=0, ppmiB̃=B[1])
+
+    for filename in readdir(folder)
+        if startswith(filename, "pert-")
+            pinfo = split(filename[6:end-4],"_")
+            pert_type = string(pinfo[1])
+            pert_size = parse(Int, pinfo[2])
+            δX = GloVe.load_cooc(joinpath(folder, filename), V)
+            D̃ = PPMI.make_ppmi_matrix(X, δX, vocab, ivocab, T, r)
+            B̃ = [Bias.effect_size(D̃, idx_set) for idx_set in weat_idx_sets]
+            append!(df, DataFrame(pert_type=pert_type, pert_size=pert_size, ppmiB̃=B̃[1]))
+            println("$pert_type, $pert_size, $(B̃[1])")
+        end
+    end
+    return df
+end
+
+pert_df = ppmi_change(out_dir)
+CSV.write(joinpath(out_dir, "ppmi_change.csv"), pert_df)
+
+
+### Repeat for original
+og_dir = "results/perturbations/C0-V15-W8-D75-R0.05-E300-B1"
+og_pert_df = ppmi_change(og_dir)
+CSV.write(joinpath(og_dir, "ppmi_change.csv"), og_pert_df)
+
+
+
+################ Hack to do here... should be in another script ###############
+### Repeat for NYT - WEAT 1
+vocab_path = "embeddings/vocab-C1-V15.txt"
+corpus_path = "corpora/nytselect.txt"
+cooc_path = "embeddings/cooc-C1-V15-W8.bin"
+
+window = extract(cooc_path, r"-W[0-9]*\.", trim=(2,1), cast=Int)
+vocab, ivocab = GloVe.load_vocab(vocab_path)
+V = length(vocab)
+corpus = Corpora.Corpus(corpus_path)
+
+weat_idx_sets = [Bias.get_weat_idx_set(set, vocab) for set in Bias.WEAT_WORD_SETS]
+all_weat_indices = unique([i for set in weat_idx_sets for inds in set for i in inds])
+
+X = GloVe.load_cooc(cooc_path, V, all_weat_indices)
+
+r = PPMI.cooc_ratio(window)
+T = PPMI.sum_counts(vocab)
+D = PPMI.make_ppmi_matrix(X, vocab, ivocab, T, r)
+B = [Bias.effect_size(D, idx_set) for idx_set in weat_idx_sets]
+
+nyt_dir = "results/perturbations/C1-V15-W8-D200-R0.05-E150-B1"
+nyt_pert_df = ppmi_change(nyt_dir)
+CSV.write(joinpath(nyt_dir, "ppmi_change.csv"), nyt_pert_df)

@@ -34,11 +34,67 @@ df = pd.read_csv("results/weat_compare/glove_weat.csv")
 df = df.join(pd.read_csv("results/weat_compare/cooc_weat.csv"))
 df = df.join(pd.read_csv("results/weat_compare/ppmi_weat.csv"))
 df["w2v"] = effect_sizes
+df.to_csv("results/weat_compare/combined.csv")
+
+df = pd.read_csv("results/weat_compare/combined.csv")
 
 
-plt.scatter(df["w2v"], df["glove"])
+# Plot
+SMALL_SIZE = 14
+MEDIUM_SIZE = 16
+BIGGER_SIZE = 18
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=MEDIUM_SIZE)  # fontsize of the figure title
+
+GRID_ALPHA = 0.25
+
+# %% Word2Vec vs. GloVe
+plt.scatter(df["glove"], df["w2v"], marker=".")
+plt.ylabel("Word2Vec")
+plt.xlabel("GloVe")
 plt.show()
+# %%
 
-np.corrcoef(df["w2v"], df["glove"])
-np.corrcoef(df["w2v"], df["ppmi"])
+
+# %% PPMI vs. GloVe
+fig = plt.figure(dpi=150, figsize=(6, 5))
+plt.scatter(df["glove"], df["ppmi"], marker=".")
+plt.ylabel("PPMI WEAT")
+plt.xlabel("GloVe WEAT")
+ax = plt.gca()
+ax.set_aspect('equal')
+XMIN, XMAX = plt.xlim((-2, 2))
+YMIN, YMAX = plt.ylim((-2, 2))
+S = 2 # tick scale
+ax.set_xticks(np.arange(np.ceil(S*XMIN)/S, (np.floor(S*XMAX) + 1)/S, 1/S))
+ax.set_yticks(np.arange(np.ceil(S*YMIN)/S, (np.floor(S*YMAX) + 1)/S, 1/S))
+plt.tight_layout()
+plt.savefig("results/weat_compare/glove_ppmi_scatter.png")
+plt.show()
 np.corrcoef(df["glove"], df["ppmi"])
+# %%
+
+
+# %% word2vec vs. GloVe
+fig = plt.figure(dpi=150, figsize=(6, 5))
+plt.scatter(df["glove"], df["w2v"], marker=".")
+plt.ylabel("word2vec WEAT")
+plt.xlabel("GloVe WEAT")
+ax = plt.gca()
+ax.set_aspect('equal')
+XMIN, XMAX = plt.xlim((-2, 2))
+YMIN, YMAX = plt.ylim((-2, 2))
+S = 2 # tick scale
+ax.set_xticks(np.arange(np.ceil(S*XMIN)/S, (np.floor(S*XMAX) + 1)/S, 1/S))
+ax.set_yticks(np.arange(np.ceil(S*YMIN)/S, (np.floor(S*YMAX) + 1)/S, 1/S))
+plt.tight_layout()
+plt.savefig("results/weat_compare/glove_w2v_scatter.png")
+plt.show()
+np.corrcoef(df["glove"], df["w2v"])
+# %%
