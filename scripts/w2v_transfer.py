@@ -50,6 +50,13 @@ df["ppmi"] = ppmi.set_index(["pert_type", "pert_size"])["ppmiB̃"]
 
 df
 
+def rename(name):
+    if name == "correct":
+        return "decrease"
+    elif name == "aggravate":
+        return "increase"
+    return name
+
 
 # %% Plot
 SMALL_SIZE = 14
@@ -96,7 +103,7 @@ for (pert_type, pert_size), vals in df.iterrows():
 
 
 
-scenarios = [name + "-" + str(size) for (name, size) in positions][::-1]
+scenarios = [rename(name) + "-" + str(size) for (name, size) in positions][::-1]
 plt.yticks(D * np.arange(len(positions)), scenarios)
 
 XLIM = plt.xlim((-2, 2))
@@ -104,11 +111,12 @@ S = 2
 ax = plt.gca()
 ax.set_xticks(np.arange(np.ceil(S*XLIM[0])/S, (np.floor(S*XLIM[1]) + 1)/S, 1/S))
 
-plt.grid(True, which="major", axis="y", linestyle="dotted")
+# plt.grid(True, which="major", axis="y", linestyle="dotted")
 plt.legend()
 plt.xlabel("WEAT effect size")
-plt.title("Transfer Effects: NYT - WEAT 1")
+# plt.title("Transfer Effects: NYT - WEAT 1")
 
 plt.tight_layout()
-plt.savefig(path.join(SAVE_DIR, "transfer_effects.png"))
+plt.savefig(path.join(SAVE_DIR, "transfer_effects.pdf"),
+            bbox_inches="tight", pad_inches=0)
 plt.show()

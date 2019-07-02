@@ -59,6 +59,14 @@ def mm2in(mm):
     return mm/25.4
 
 
+def rename(name):
+    if name == "correct":
+        return "decrease"
+    elif name == "aggravate":
+        return "increase"
+    return name
+
+
 # Plotting Functions
 
 # Histrogram of Diff Bias
@@ -73,17 +81,18 @@ def make_histogram(filename="diff_bias.csv", target_col="ΔBIF_μ"):
     plt.yscale('log', nonposy='clip')
     plt.ylabel("Number of Documents")
     plt.xlabel("Differential Bias of Removal (%)")
-    plt.title(CORPUS + " - " + BIAS)
+    # plt.title(CORPUS + " - " + BIAS)
     xl, xr = plt.xlim()
     yd, yu = plt.ylim()
     plt.text(0.9 * xl, 0.5 * yu, textstr, fontsize=16, verticalalignment='top',
              horizontalalignment='left', bbox=props)
     plt.tight_layout()
-    plt.savefig(path.join(SAVE_DIR, "histogram_{}_{}.png".format(CORPUS, BIAS_NUM)))
+    plt.savefig(path.join(SAVE_DIR, "histogram_{}_{}.pdf".format(CORPUS, BIAS_NUM)),
+                bbox_inches="tight", pad_inches=0)
     SHOW_PLOTS and plt.show()
 
 
-# Comparison of approximation and validation
+# Comparison of approximation and
 def make_comparision_plot(preds, trues, random=False):
     preds_grouped = preds.groupby(["pert_type", "pert_size", "pert_run"])
     trues_grouped = trues.groupby(["pert_type", "pert_size", "pert_run"])
@@ -95,7 +104,7 @@ def make_comparision_plot(preds, trues, random=False):
     positions += [("baseline", 0)]
     positions += [("correct", s) for s in SIZES]
     D = 3  # vertical space between scenarios
-    d = 0.8  # vertial space between validation and approximation
+    d = 0.8  # vertial space between ground truth and approximation
     random_scenarios = []
 
     # Baseline embedding
@@ -130,10 +139,10 @@ def make_comparision_plot(preds, trues, random=False):
             plt.scatter(preds_x, preds_y, c='b', marker='.',
                         label=(first_preds and "approximation" or None))
             plt.scatter(preds_u, pos, c='b', marker="d",
-                        label=(first_preds and "mean" or None))
+                        label=(first_preds and "approx. mean" or None))
             first_preds = False
             i += 1
-            # Validation
+            # ground truth
             trues_group = trues_groups.get((pert_type, pert_size, pert_run))
             if trues_group is None:
                 continue
@@ -141,9 +150,9 @@ def make_comparision_plot(preds, trues, random=False):
             trues_u = np.mean(trues_x)
             trues_y = (pos + d) * np.ones(len(trues_x))
             plt.scatter(trues_x, trues_y, c='r', marker='.',
-                        label=(first_trues and "validation" or None))
+                        label=(first_trues and "ground truth" or None))
             plt.scatter(trues_u, (pos + d), c='r', marker="d",
-                        label=(first_trues and "mean" or None))
+                        label=(first_trues and "gnd. truth mean" or None))
             first_trues = False
             # Statistical testing
             pAV = stats.ttest_ind(trues_x, preds_x, equal_var=False)[1]
@@ -152,7 +161,7 @@ def make_comparision_plot(preds, trues, random=False):
             print(pert_type, pert_size, "reject:", pBV < 0.05, "pBV:", pBV, "lower:", pBV < pAV, "pAV:", pAV)
 
     # Title etc.
-    scenarios = [name + "-" + str(size) for (name, size) in positions]
+    scenarios = [rename(name) + "-" + str(size) for (name, size) in positions]
     if base_mean >= 0.25:
         scenarios = scenarios[::-1]  # Handle Wiki - WEAT2
     plt.xlabel("WEAT effect size")
@@ -162,15 +171,16 @@ def make_comparision_plot(preds, trues, random=False):
         plt.yticks(D * np.arange(len(positions)) + d/2, scenarios)
     # plt.ylabel("Scenario")
     plt.legend()
-    plt.title(CORPUS + " - " + BIAS)
+    # plt.title(CORPUS + " - " + BIAS)
     # Space ticks reasonably
     XLIM = plt.xlim((-2, 2))
     S = 2
     ax = plt.gca()
     ax.set_xticks(np.arange(np.ceil(S*XLIM[0])/S, (np.floor(S*XLIM[1]) + 1)/S, 1/S))
     plt.tight_layout()
-    fig_name = "random_{}_{}.png" if random else "targeted_{}_{}.png"
-    plt.savefig(path.join(SAVE_DIR, fig_name.format(CORPUS, BIAS_NUM)))
+    fig_name = "random_{}_{}.pdf" if random else "targeted_{}_{}.pdf"
+    plt.savefig(path.join(SAVE_DIR, fig_name.format(CORPUS, BIAS_NUM)),
+                bbox_inches="tight", pad_inches=0)
     SHOW_PLOTS and plt.show()
 
 
@@ -209,9 +219,9 @@ def make_correlation_plot(preds, trues):
     plt.plot(x_means, a*x_means + b, c='r', ls="dashed")
 
     # Title, format etc
-    plt.title(CORPUS + " - " + BIAS)
+    # plt.title(CORPUS + " - " + BIAS)
     plt.ylabel('Approximated Effect Size')
-    plt.xlabel('Validated Effect Size')
+    plt.xlabel('Ground Truth Effect Size')
     ax = plt.gca()
     ax.set_aspect('equal')
     XMIN, XMAX = plt.xlim((-2, 2))
@@ -220,7 +230,8 @@ def make_correlation_plot(preds, trues):
     ax.set_xticks(np.arange(np.ceil(S*XMIN)/S, (np.floor(S*XMAX) + 1)/S, 1/S))
     ax.set_yticks(np.arange(np.ceil(S*YMIN)/S, (np.floor(S*YMAX) + 1)/S, 1/S))
     plt.tight_layout()
-    plt.savefig(path.join(SAVE_DIR, "means_{}_{}.png".format(CORPUS, BIAS_NUM)))
+    plt.savefig(path.join(SAVE_DIR, "means_{}_{}.pdf".format(CORPUS, BIAS_NUM)),
+                bbox_inches="tight", pad_inches=0)
     SHOW_PLOTS and plt.show()
 
 

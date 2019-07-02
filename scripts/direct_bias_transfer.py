@@ -55,9 +55,9 @@ for pos, vals in df.iterrows():
     plt.errorbar(vals["base_μ"], y, xerr=vals["base_σ"], marker="s", c="k",
                 label=first_pass and "base" or None)
     plt.errorbar(vals["agg_μ"], y, xerr=vals["agg_σ"], marker="v", c="g",
-                label=first_pass and "cor." or None)
+                label=first_pass and "(-) inc." or None)
     plt.errorbar(vals["cor_μ"], y, xerr=vals["cor_σ"], marker="^", c="r",
-                label=first_pass and "agg." or None)
+                label=first_pass and "(-) dec." or None)
     first_pass = False
 
 plt.legend()
@@ -66,7 +66,8 @@ plt.ylabel("SCIENCE                    ARTS   ")
 plt.xlabel("male <-- gender axis --> female")
 plt.grid(True, which="major", axis="y", linestyle="dotted")
 plt.tight_layout()
-plt.savefig("results/direct_bias/direct_bias.png")
+plt.savefig("results/direct_bias/direct_bias.pdf",
+            bbox_inches="tight", pad_inches=0)
 plt.show()
 
 
