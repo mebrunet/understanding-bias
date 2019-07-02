@@ -54,6 +54,7 @@ function effect_size(W, weat_idx_set::NamedTuple)
     return effect_size(S, T, A, B)
 end
 
+
 function effect_size(X::SparseMatrixCSC, weat_idx_set::NamedTuple; limit_scope=false)
     indices = [i for inds in weat_idx_set for i in inds]
     S = limit_scope ? X[indices, weat_idx_set.S] : X[:, weat_idx_set.S]
@@ -62,7 +63,6 @@ function effect_size(X::SparseMatrixCSC, weat_idx_set::NamedTuple; limit_scope=f
     B = limit_scope ? X[indices, weat_idx_set.B] : X[:, weat_idx_set.B]
     return effect_size(S, T, A, B)
 end
-
 
 
 # Helper to compute effect size after changes to the embedding
@@ -99,5 +99,52 @@ function p_value(W, word_indices, N=10_000)
     return mean(trials .> es)
 end
 
+
+function compute_weights(vocab, ivocab, indices; family=:poly, α=1/3, β=15)
+    raw_counts = [vocab[ivocab[idx]].count for idx in indices]
+    if family == :prop
+        return raw_counts / sum(raw_counts)
+    elseif family == :log
+        return log.(raw_counts / β) / sum(log.(raw_counts / β))
+    else
+        return raw_counts.^α / sum(raw_counts.^α)
+    end
+end
+
+function weighted_effect_size(W, vocab, ivocab, weat_idx_set::NamedTuple;
+                              family=:poly, α=1/3, β=15)
+    Ŝ = normalize_rows(W[weat_idx_set.S, :])
+    T̂ = normalize_rows(W[weat_idx_set.T, :])
+    Â = normalize_rows(W[weat_idx_set.A, :])
+    B̂ = normalize_rows(W[weat_idx_set.B, :])
+
+    Cs = compute_weights(vocab, ivocab, weat_idx_set.S; family=family, α=α, β=β)
+    Ct = compute_weights(vocab, ivocab, weat_idx_set.T; family=family, α=α, β=β)
+    Ca = compute_weights(vocab, ivocab, weat_idx_set.A; family=family, α=α, β=β)
+    Cb = compute_weights(vocab, ivocab, weat_idx_set.B; family=family, α=α, β=β)
+
+    SA = Ŝ * Â'
+    SB = Ŝ * B̂'
+    TA = T̂ * Â'
+    TB = T̂ * B̂'
+
+    sa = SA * Ca
+    sb = SB * Cb
+    ta = TA * Ca
+    tb = TB * Cb
+
+    Ws = Cs
+    Wt = Ct
+    Wst = vcat(Ws, Wt)
+    L = length(Wst)
+
+    μS = Ws' * (sa - sb)
+    μT = Wt' * (ta - tb)
+    μ = (μS + μT) / 2.0
+
+    σ = √((Ws' * ((sa - sb) .- μ).^2 + Wt' * ((ta - tb) .- μ).^2) / ((L-1)/L * sum(Wst)))
+
+    return (μS - μT) / σ
+end
 
 end
