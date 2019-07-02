@@ -3,7 +3,7 @@ using SparseArrays
 
 @testset "PPMI" begin
 
-    include("../src/GloVe.jl")
+    !isdefined(Main, :GloVe) && include("../src/GloVe.jl")
     include("../src/PPMI.jl")
     test_cooc_path = "test_cooc.bin"
     full_cooc_path = "../embeddings/cooc-C0-V20-W8.bin"
