@@ -55,6 +55,7 @@ function effect_size(W, weat_idx_set::NamedTuple)
 end
 
 
+# Effect size directly in an unembedded space (e.g. PPMI)
 function effect_size(X::SparseMatrixCSC, weat_idx_set::NamedTuple; limit_scope=false)
     indices = [i for inds in weat_idx_set for i in inds]
     S = limit_scope ? X[indices, weat_idx_set.S] : X[:, weat_idx_set.S]
@@ -65,21 +66,29 @@ function effect_size(X::SparseMatrixCSC, weat_idx_set::NamedTuple; limit_scope=f
 end
 
 
+# Get weat vectors from indices, possibly adding small updates (deltas) to them
+function make_weat_vec_set(W::AbstractArray, weat_idx_set::NamedTuple;
+                           deltas::Dict=Dict{Integer,Array}())::NamedTuple
+   weat_vec_set = []
+   delta_indices = keys(deltas) # the indices that have changes
+   for indices in weat_idx_set
+       vecs = W[indices, :]
+       for (idx, pos) = zip(delta_indices, indexin(delta_indices, indices))
+           # idx: word index of changed vectors
+           # pos: relative position of that index in the "vecs" matrix
+           if pos != nothing
+               vecs[pos, :] += deltas[idx]
+           end
+       end
+       push!(weat_vec_set, vecs)
+   end
+   return NamedTuple{(:S, :T, :A, :B)}(Tuple(weat_vec_set))
+end
+
+
 # Helper to compute effect size after changes to the embedding
-function effect_size(W, weat_idx_set::NamedTuple, deltas::Dict)
-    weat_vec_set = []
-    delta_indices = keys(deltas) # the indices that have changes
-    for indices in weat_idx_set
-        vecs = W[indices, :]
-        for (idx, pos) = zip(delta_indices, indexin(delta_indices, indices))
-            # idx: word index of changed vectors
-            # pos: relative position of that index in the "vecs" matrix
-            if pos != nothing
-                vecs[pos, :] += deltas[idx]
-            end
-        end
-        push!(weat_vec_set, vecs)
-    end
+function effect_size(W::AbstractArray, weat_idx_set::NamedTuple, deltas::Dict)
+    weat_vec_set = make_weat_vec_set(W, weat_idx_set, deltas=deltas)
     return effect_size(weat_vec_set...)
 end
 
@@ -100,53 +109,54 @@ function p_value(W, word_indices, N=10_000)
 end
 
 
-function compute_weights(vocab, ivocab, indices; family=:poly, α=1/3, β=15)
+function compute_weights(vocab::Dict, ivocab::Array{String}, indices;
+                         family=:prop, α::Real=1/3, β::Real=15)
     raw_counts = [vocab[ivocab[idx]].count for idx in indices]
-    if family == :prop
-        return raw_counts / sum(raw_counts)
+    if family == :poly
+        # Polynomial
+        return raw_counts.^α / sum(raw_counts.^α)
     elseif family == :log
+        # Logarithmic
         return log.(raw_counts / β) / sum(log.(raw_counts / β))
     else
-        return raw_counts.^α / sum(raw_counts.^α)
+        # Proportional
+        return raw_counts / sum(raw_counts)
     end
 end
+
+
+function make_weat_weight_set(vocab::Dict, ivocab::Array{String},
+                              weat_idx_set::NamedTuple; family=:prop,
+                              α::Real=1/3, β::Real=15)::NamedTuple
+    weights = [compute_weights(vocab, ivocab, indices, family=family, α=α, β=β)
+               for indices in weat_idx_set]
+    return NamedTuple{(:S, :T, :A, :B)}(Tuple(weights))
+end
+
 
 # Helper to compute weighted effect size after changes to the embedding
-function weighted_effect_size(W, vocab, ivocab, weat_idx_set::NamedTuple;
-                              deltas=nothing, family=:poly, α=1/3, β=15)
-    # If no changes replace with empty dict
-    if deltas == nothing
-        deltas = Dict()
-    end
-    weat_vec_set = []
-    delta_indices = keys(deltas) # the indices that have changes
-    for indices in weat_idx_set
-        vecs = W[indices, :]
-        for (idx, pos) = zip(delta_indices, indexin(delta_indices, indices))
-            # idx: word index of changed vectors
-            # pos: relative position of that index in the "vecs" matrix
-            if pos != nothing
-                vecs[pos, :] += deltas[idx]
-            end
-        end
-        push!(weat_vec_set, vecs)
-    end
-    return weighted_effect_size(weat_vec_set..., vocab, ivocab, weat_idx_set;
-                                family=family, α=α, β=β)
+function weighted_effect_size(W::AbstractArray, vocab::Dict,
+                              ivocab::Array{String}, weat_idx_set::NamedTuple;
+                              deltas::Dict=Dict(), family=:prop, α::Real=1/3,
+                              β::Real=15)
+    weat_vec_set = make_weat_vec_set(W, weat_idx_set, deltas=deltas)
+    weat_weight_set = make_weat_weight_set(vocab, ivocab, weat_idx_set,
+                                           family=family, α=α, β=β)
+    return weighted_effect_size(weat_vec_set, weat_weight_set)
 end
 
 
-function weighted_effect_size(S, T, A, B, vocab, ivocab, weat_idx_set::NamedTuple;
-                              family=:poly, α=1/3, β=15)
-    Ŝ = normalize_rows(S)
-    T̂ = normalize_rows(T)
-    Â = normalize_rows(A)
-    B̂ = normalize_rows(B)
+function weighted_effect_size(weat_vec_set::NamedTuple,
+                              weat_weight_set::NamedTuple)
+    Ŝ = normalize_rows(weat_vec_set.S)
+    T̂ = normalize_rows(weat_vec_set.T)
+    Â = normalize_rows(weat_vec_set.A)
+    B̂ = normalize_rows(weat_vec_set.B)
 
-    Cs = compute_weights(vocab, ivocab, weat_idx_set.S; family=family, α=α, β=β)
-    Ct = compute_weights(vocab, ivocab, weat_idx_set.T; family=family, α=α, β=β)
-    Ca = compute_weights(vocab, ivocab, weat_idx_set.A; family=family, α=α, β=β)
-    Cb = compute_weights(vocab, ivocab, weat_idx_set.B; family=family, α=α, β=β)
+    Cs = weat_weight_set.S
+    Ct = weat_weight_set.T
+    Ca = weat_weight_set.A
+    Cb = weat_weight_set.B
 
     SA = Ŝ * Â'
     SB = Ŝ * B̂'
