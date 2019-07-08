@@ -111,12 +111,37 @@ function compute_weights(vocab, ivocab, indices; family=:poly, α=1/3, β=15)
     end
 end
 
+# Helper to compute weighted effect size after changes to the embedding
 function weighted_effect_size(W, vocab, ivocab, weat_idx_set::NamedTuple;
+                              deltas=nothing, family=:poly, α=1/3, β=15)
+    # If no changes replace with empty dict
+    if deltas == nothing
+        deltas = Dict()
+    end
+    weat_vec_set = []
+    delta_indices = keys(deltas) # the indices that have changes
+    for indices in weat_idx_set
+        vecs = W[indices, :]
+        for (idx, pos) = zip(delta_indices, indexin(delta_indices, indices))
+            # idx: word index of changed vectors
+            # pos: relative position of that index in the "vecs" matrix
+            if pos != nothing
+                vecs[pos, :] += deltas[idx]
+            end
+        end
+        push!(weat_vec_set, vecs)
+    end
+    return weighted_effect_size(weat_vec_set..., vocab, ivocab, weat_idx_set;
+                                family=family, α=α, β=β)
+end
+
+
+function weighted_effect_size(S, T, A, B, vocab, ivocab, weat_idx_set::NamedTuple;
                               family=:poly, α=1/3, β=15)
-    Ŝ = normalize_rows(W[weat_idx_set.S, :])
-    T̂ = normalize_rows(W[weat_idx_set.T, :])
-    Â = normalize_rows(W[weat_idx_set.A, :])
-    B̂ = normalize_rows(W[weat_idx_set.B, :])
+    Ŝ = normalize_rows(S)
+    T̂ = normalize_rows(T)
+    Â = normalize_rows(A)
+    B̂ = normalize_rows(B)
 
     Cs = compute_weights(vocab, ivocab, weat_idx_set.S; family=family, α=α, β=β)
     Ct = compute_weights(vocab, ivocab, weat_idx_set.T; family=family, α=α, β=β)
