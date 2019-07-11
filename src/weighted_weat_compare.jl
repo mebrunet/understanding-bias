@@ -11,6 +11,7 @@ include("GloVe.jl")
 include("Bias.jl")
 include("utils.jl")
 
+gr()
 
 # Load NYT
 target = get(ARGS, 1, "C1-V15-W8-D200-R0.05-E150")
@@ -65,12 +66,13 @@ function make_permutation_sets(word_indices::NamedTuple, N=10_000)
 end
 
 
-function plot_trials(trials; title=nothing)
+function plot_trials(trials; title=nothing, savefile=nothing)
     N = length(trials)
     plt = histogram(trials, bins=100, normalize=false, legend=nothing)
     (title != nothing) && title!(title)
     xlabel!("Effect Size")
     ylabel!("Number of Trials (N=$(N))")
+    typeof(savefile) == String && savefig(plt, savefile)
     display(plt)
 end
 
@@ -88,9 +90,23 @@ function make_family_name(family::Symbol, α=nothing, β=nothing)
 end
 
 
+function make_save_name(family, α=nothing, β=nothing, sets_name=nothing)
+    local save_name
+    if family == :prop
+        save_name = "trials-$(sets_name)-$(string(family))"
+    elseif family == :log
+        save_name = "trials-$(sets_name)-$(string(family))_$(round(β, digits=2))"
+    elseif family == :poly
+        save_name = "trials-$(sets_name)-$(string(family))_$(round(α, digits=2))"
+    else
+        save_name = "trials-$sets_name-standard"
+    end
+    return save_name
+end
+
 
 function run_plot_trials(W, vocab, ivocab, idx_sets; sets_name=nothing,
-                         family=nothing, α=1/3, β=15)
+                         family=nothing, α=1/3, β=15, savefolder=nothing)
     local weat_name, trials
     if family == nothing
         weat_name = "Standard"
@@ -104,26 +120,32 @@ function run_plot_trials(W, vocab, ivocab, idx_sets; sets_name=nothing,
     if sets_name != nothing
         title *= " on $(sets_name)"
     end
-    plot_trials(trials, title=title)
+    savefile = nothing
+    if typeof(savefolder) == String
+        savefile = joinpath(savefolder, make_save_name(family, α, β, sets_name))
+    end
+    plot_trials(trials, title=title, savefile=savefile)
 end
 
 
 function run_plot_all_trials(W, vocab, ivocab, sets_dict; family=nothing,
-                             α=1/3, β=15)
+                             α=1/3, β=15, savefolder=nothing)
     for (name, idx_sets) in pairs(sets_dict)
         println("Plotting $(name)...")
         run_plot_trials(W, vocab, ivocab, idx_sets, sets_name=name,
-                        family=family, α=α, β=β)
+                        family=family, α=α, β=β, savefolder=savefolder)
     end
 end
 
 
-function plot_counts(vocab::Dict, ivocab::Array{String}, idx_set)
+function plot_counts(vocab::Dict, ivocab::Array{String}, idx_set;
+                     savefile=nothing)
     indices = vcat(idx_set...)
     raw_counts = [vocab[ivocab[idx]].count for idx in indices]
     plt = bar(1:length(indices), raw_counts, yscale=:log10, legend=nothing)
     xticks!(collect(1:length(indices)), ivocab[indices], xrotation=45)
     title!("Word Counts")
+    typeof(savefile) == String && savefig(plt, savefile)
     display(plt)
 end
 
@@ -138,7 +160,7 @@ end
 
 
 function plot_weights(vocab::Dict, ivocab::Array{String}, idx_set; family=:prop,
-                     α=1/3, β=15)
+                     α=1/3, β=15, savefile=nothing)
     indices = vcat(idx_set...)
     centers = collect(1:length(indices))
     raw_counts = [vocab[ivocab[idx]].count for idx in indices]
@@ -151,6 +173,7 @@ function plot_weights(vocab::Dict, ivocab::Array{String}, idx_set; family=:prop,
          opacity=0.3, legend=false)
     xticks!(centers, ivocab[indices], xrotation=45)
     title!(make_family_name(family, α, β))
+    typeof(savefile) == String && savefig(plt, savefile)
     display(plt)
 end
 
@@ -169,24 +192,31 @@ rand_sets = Dict(
     "perm_2" => make_permutation_sets(weat_idx_sets[2], 10_000))
 
 
+save_dir = "results/weighted_weat"
 println("Standard WEAT")
-plot_counts(vocab, ivocab, weat_idx_sets[1])
-run_plot_all_trials(W, vocab, ivocab, rand_sets)
+plot_counts(vocab, ivocab, weat_idx_sets[1], savefile="$save_dir/weat1_counts")
+run_plot_all_trials(W, vocab, ivocab, rand_sets, savefolder=save_dir)
 
 println("Proportional Weighted WEAT")
-plot_weights(vocab, ivocab, weat_idx_sets[1], family=:prop)
-run_plot_all_trials(W, vocab, ivocab, rand_sets, family=:prop)
+plot_weights(vocab, ivocab, weat_idx_sets[1], family=:prop,
+             savefile="$save_dir/weights-prop")
+run_plot_all_trials(W, vocab, ivocab, rand_sets, family=:prop,
+                    savefolder=save_dir)
 
 println("Log Weighted WEAT")
 for β in [1, 15]
-    plot_weights(vocab, ivocab, weat_idx_sets[1], family=:log, β=β)
+    plot_weights(vocab, ivocab, weat_idx_sets[1], family=:log, β=β,
+                 savefile="$save_dir/weights-log_$(round(β, digits=2))")
     println("beta = $β")
-    run_plot_all_trials(W, vocab, ivocab, rand_sets, family=:log, β=β)
+    run_plot_all_trials(W, vocab, ivocab, rand_sets, family=:log, β=β,
+                        savefolder=save_dir)
 end
 
 println("Polynomial Weighted WEAT")
 for α in [1/5, 1/3, 1/2]
-    plot_weights(vocab, ivocab, weat_idx_sets[1], family=:poly, α=α)
+    plot_weights(vocab, ivocab, weat_idx_sets[1], family=:poly, α=α,
+                 savefile="$save_dir/weights-poly_$(round(α, digits=2))")
     println("alpha = $(round(α, digits=2))")
-    run_plot_all_trials(W, vocab, ivocab, rand_sets, family=:poly, α=α)
+    run_plot_all_trials(W, vocab, ivocab, rand_sets, family=:poly, α=α,
+                        savefolder=save_dir)
 end
