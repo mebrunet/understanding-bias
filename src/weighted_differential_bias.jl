@@ -68,19 +68,27 @@ function handle_results(out_file, results, num_jobs)
 end
 
 
-@everywhere function percent_diff_bias(document, M, X, inv_hessians, gradients,
-                                       weat_idx_sets, effect_sizes)
+@everywhere function percent_diff_bias(document, M, X, inv_hessians,
+                                       gradients, weat_idx_sets,
+                                       effect_sizes, weat_weight_sets)
     # Make the IF approximation
-    target_indices = unique([i for set in weat_idx_sets for inds in set for i in inds])
-    deltas = GloVe.compute_IF_deltas(document, M, X, target_indices, inv_hessians, gradients)
+    target_indices = unique([i for set in weat_idx_sets
+                             for inds in set for i in inds])
+    deltas = GloVe.compute_IF_deltas(document, M, X, target_indices,
+                                     inv_hessians, gradients)
     # Compute the bias change
-    B̃ = [Bias.weighted_effect_size(M.W, M.vocab, M.ivocab, set; deltas=deltas, family=:poly, α=1/3) for set in weat_idx_sets]
+    weat_vec_sets = [Bias.make_weat_vec_set(M.W, idx_set, deltas=deltas)
+                     for idx_set in weat_idx_sets]
+    B̃ = [Bias.weighted_effect_size(vec_set, weight_set)
+         for (vec_set, weight_set) in zip(weat_vec_sets,
+                                          weat_weight_sets)]
     return [100 * (b - b̃) / b for (b, b̃) in zip(effect_sizes, B̃)]
 end
 
 
-@everywhere function run_worker(jobs, results, M, X, inv_hessians, gradients, weat_idx_sets,
-                            effect_sizes)
+@everywhere function run_worker(jobs, results, M, X, inv_hessians,
+                                gradients, weat_idx_sets,
+                                effect_sizes, weat_weight_sets)
     pid = myid()
     println(stdout, "Starting worker $(pid)")
     flush(stdout)
@@ -94,8 +102,9 @@ end
             break # Channel has been closed
         end
 
-        ΔBIF = percent_diff_bias(doc, M, X, inv_hessians, gradients, weat_idx_sets,
-                                   effect_sizes)
+        ΔBIF = percent_diff_bias(doc, M, X, inv_hessians, gradients,
+                                 weat_idx_sets, effect_sizes,
+                                 weat_weight_sets)
         put!(results, (pid, doc_num, ΔBIF))
     end
     println(stdout, "Ending worker $(pid)")
@@ -118,9 +127,14 @@ function main()
     println("Corpus: $(corpus.corpus_path) ($(corpus.num_words) tokens, $(corpus.num_documents) docs)")
 
     # WEAT BIAS
-    weat_idx_sets = [Bias.get_weat_idx_set(set, M.vocab) for set in Bias.WEAT_WORD_SETS]
-    all_weat_indices = unique([i for set in weat_idx_sets for inds in set for i in inds])
-    effect_sizes = [Bias.weighted_effect_size(M.W, M.vocab, M.ivocab, set; family=:poly, α=1/3) for set in weat_idx_sets]
+    weat_idx_sets = [Bias.get_weat_idx_set(set, M.vocab)
+                     for set in Bias.WEAT_WORD_SETS]
+    all_weat_indices = unique([i for set in weat_idx_sets
+                               for inds in set for i in inds])
+    weat_weight_sets = [Bias.make_weat_weight_set(M.vocab, M.ivocab, idx_set,
+                        family=:poly, α=1/3) for idx_set in weat_idx_sets]
+    effect_sizes = [Bias.weighted_effect_size(M.W, M.vocab, M.ivocab, idx_set;
+                    family=:poly, α=1/3) for idx_set in weat_idx_sets]
     # p_values = [Bias.p_value(M.W, set) for set in weat_idx_sets]
     println("WEAT effect sizes: $effect_sizes")
     # println("WEAT p-values: $p_values")
@@ -144,7 +158,9 @@ function main()
         @async queue_jobs(corpus, jobs, job_list)
 
         for p in workers()
-            @async remote_do(run_worker, p, jobs, results, M, X, inv_hessians, gradients, weat_idx_sets, effect_sizes)
+            @async remote_do(run_worker, p, jobs, results, M, X, inv_hessians,
+                             gradients, weat_idx_sets, effect_sizes,
+                             weat_weight_sets)
         end
 
         @async handle_results(out_file, results, length(job_list))
