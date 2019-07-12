@@ -124,7 +124,47 @@ function print_doc(doc_num, corpus; weat_word_set=nothing)
 end
 
 
-# Main
+# Visualization Helpers
+function cossim_matrix(S::AbstractArray, T::AbstractArray, A::AbstractArray,
+                       B::AbstractArray)
+    Ŝ = Bias.normalize_rows(S)
+    T̂ = Bias.normalize_rows(T)
+    Â = Bias.normalize_rows(A)
+    B̂ = Bias.normalize_rows(B)
+    return [(Ŝ * Â') (Ŝ * B̂');  (T̂ * Â') (T̂ * B̂')]
+end
+
+
+function plot_weat(vec_set, weat_word_set)
+    cos_mat = cossim_matrix(vec_set...)
+    ylab = [weat_word_set.S ...; weat_word_set.T ...]
+    xlab = [weat_word_set.A ...; weat_word_set.B ...]
+    es = Bias.effect_size(vec_set...)
+    print("WEAT - effect_size: $(round(es, digits=4))")
+    heatmap(xlab, ylab, cos_mat, aspect_ratio=1, ticks=:all)
+    xaxis!(xrotation=90)
+    title!("WEAT - Cossim Matrix")
+end
+
+# Sanity Check
+# test_vec_set = (S = rand(8, 20), T = ones(8, 20), A = ones(8,20), B = rand(8,20))
+# plot_weat(test_vec_set, Bias.WEAT_WORD_SETS[1])
+
+
+function plot_delta_weat(og_vec_set, new_vec_set, weat_word_set)
+    og_cos_mat = cossim_matrix(og_vec_set...)
+    new_cos_mat = cossim_matrix(new_vec_set...)
+    ylab = [weat_word_set.S ...; weat_word_set.T ...]
+    xlab = [weat_word_set.A ...; weat_word_set.B ...]
+    diff_bias = Bias.effect_size(og_vec_set...) - Bias.effect_size(new_vec_set...)
+    print("WEAT - diff bias: $(round(diff_bias, digits=4))")
+    heatmap(xlab, ylab, og_cos_mat-new_cos_mat, aspect_ratio=1, ticks=:all)
+    xaxis!(xrotation=90)
+    title!("Delta Cossim Matrix")
+end
+
+
+# REPL Main
 corpus = Corpora.Corpus("corpora/nytselect.txt")
 target="C1-V15-W8-D200-R0.05-E150"
 fileinfo(target)
@@ -140,5 +180,23 @@ w_bias_df = load_df(target, :ΔBIF_1, diff_bias_dir="results/weighted_diff_bias"
 w_df = join(w_bias_df[[:doc_num, :ΔBIF_μ]], meta_df, on=:doc_num)
 list_most_biased(w_df, corpus; outdir="results/weighted_diff_bias/", name="W-NYT-B1")
 
+# Visualize
+text = Corpora.get_text(corpus, 1117880)
+M = GloVe.load_model("embeddings/vectors-C1-V15-W8-D200-R0.05-E150-S1.bin")
+X_weat = GloVe.load_cooc("embeddings/cooc-C1-V15-W8.weat.bin", M.V)
+weat_idx_sets = [Bias.get_weat_idx_set(set, M.vocab)
+                 for set in Bias.WEAT_WORD_SETS]
+all_weat_indices = unique([i for set in weat_idx_sets
+                           for inds in set for i in inds])
+
 # Play around in REPL
-p(n) = print_doc(n, corpus, weat_word_set=Bias.WEAT_WORD_SETS[1])
+function p(doc_num)
+    print_doc(doc_num, corpus, weat_word_set=Bias.WEAT_WORD_SETS[1])
+    text = Corpora.get_text(corpus, doc_num)
+    deltas = GloVe.compute_IF_deltas(text, M, X_weat, all_weat_indices)
+    og_weat_vecs = Bias.make_weat_vec_set(M.W, weat_idx_sets[1])
+    new_weat_vecs = Bias.make_weat_vec_set(M.W, weat_idx_sets[1], deltas=deltas)
+    plot_delta_weat(og_weat_vecs, new_weat_vecs, Bias.WEAT_WORD_SETS[1])
+end
+
+p(942302)

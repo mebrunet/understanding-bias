@@ -360,6 +360,26 @@ function compute_IF_deltas(document::String, M, X::SparseMatrixCSC)
 end
 
 
+# Memory Saving: Avoid needing full cooc matrix and only focus on weat indices
+function compute_IF_deltas(document::String, M, X_select::SparseMatrixCSC,
+                           target_indices::Array{Int64,1})
+    Y = GloVe.doc2cooc(document, M.vocab, M.d)  # The perturbation
+    select_affected_inds = intersect(unique(Y.rowval), target_indices)  # consider less
+    N = length(select_affected_inds)
+    deltas = Dict{Int64,Array{Float64,1}}()  # Hash deltas by word index
+    if N != 0
+        X̃ = dropzeros(max.(0.0, X_select - Y))  # non-neg catch incase doc out of corpus
+        for idx in select_affected_inds
+            gi = ∇Li(M.W, M.b_w, M.U, M.b_u, X_select, idx)  # original gradient
+            Hi = ∇²Li(M.U, X_select, idx)  # original hessian
+            g̃i = ∇Li(M.W, M.b_w, M.U, M.b_u, X̃, idx)  # perturbed gradient
+            deltas[idx] = inv(Hi) * (gi - g̃i)
+        end
+    end
+    return deltas
+end
+
+
 # Speed-up: avoid computing anything you don't need to
 function compute_IF_deltas(document::String, M, X::SparseMatrixCSC,
         target_indices::Array{Int64,1}, inv_hessians::Dict{Int64,Array{Float64,2}},
