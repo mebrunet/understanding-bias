@@ -135,15 +135,57 @@ function cossim_matrix(S::AbstractArray, T::AbstractArray, A::AbstractArray,
 end
 
 
-function plot_weat(vec_set, weat_word_set)
+function make_label_string(a::String, b::String; center_str="   <---->   ")
+    label = a * center_str * b
+    if length(a) > length(b)
+        # pad b
+        label = label * " "^(length(a) - length(b))
+    elseif length(b) > length(a)
+        # pad a
+        label = " "^(length(b) - length(a)) * label
+    end
+    return label
+end
+
+
+function weat_map(cos_mat, weat_word_set; title="Cosine Similarities",
+                  savefile=nothing, set_names=nothing)
+    ylab = [weat_word_set.S ...; "------------"; weat_word_set.T ...]
+    xlab = [weat_word_set.A ...; "------------"; weat_word_set.B ...]
+    s, t = length(weat_word_set.S), length(weat_word_set.T)
+    a, b = length(weat_word_set.A), length(weat_word_set.B)
+    @assert size(cos_mat) == (s + t, a + b)
+    spaced_mat = [cos_mat[1:s, 1:a] zeros(s, 1) cos_mat[1:s, a+1:end];
+                  zeros(1, a + 1 + b);
+                  cos_mat[s+1:end, 1:a] zeros(t, 1) cos_mat[s+1:end, a+1:end]]
+    lim = maximum(abs.(cos_mat))
+    plt = heatmap(xlab, ylab, spaced_mat, aspect_ratio=1, ticks=:all,
+                  clims=(-lim, lim), fill=:coolwarm, cbar=false, size=(800,850),
+                  tickfontsize=16, titlefontsize=28)
+    vline!([a + 0.5], color="black", legend=false)
+    hline!([s + 0.5], color="black", legend=false)
+    xaxis!(xrotation=90)
+    if set_names != nothing
+        ylabel!(make_label_string(set_names.S, set_names.T), yguidefontsize=18)
+        xlabel!(make_label_string(set_names.A, set_names.B), xguidefontsize=18)
+    end
+    title!(title)
+    savefile != nothing && savefig(plt, savefile)
+    display(plt)
+    return plt
+end
+
+# weat_map(rand(16,16) .- 0.5, Bias.WEAT_WORD_SETS[1],
+#          set_names=(S="male", T="female", A="science", B="arts"))
+
+function plot_weat(vec_set, weat_word_set; title="Cosine Similarities",
+                   savefile=nothing, set_names=nothing)
     cos_mat = cossim_matrix(vec_set...)
-    ylab = [weat_word_set.S ...; weat_word_set.T ...]
-    xlab = [weat_word_set.A ...; weat_word_set.B ...]
     es = Bias.effect_size(vec_set...)
     print("WEAT - effect_size: $(round(es, digits=4))")
-    heatmap(xlab, ylab, cos_mat, aspect_ratio=1, ticks=:all)
-    xaxis!(xrotation=90)
-    title!("WEAT - Cossim Matrix")
+    return weat_map(cos_mat, weat_word_set, title=title, savefile=savefile,
+                    set_names=set_names)
+
 end
 
 # Sanity Check
@@ -151,16 +193,16 @@ end
 # plot_weat(test_vec_set, Bias.WEAT_WORD_SETS[1])
 
 
-function plot_delta_weat(og_vec_set, new_vec_set, weat_word_set)
+function plot_delta_weat(og_vec_set, new_vec_set, weat_word_set;
+                         title="Cosine Similarities", savefile=nothing,
+                         set_names=nothing)
     og_cos_mat = cossim_matrix(og_vec_set...)
     new_cos_mat = cossim_matrix(new_vec_set...)
-    ylab = [weat_word_set.S ...; weat_word_set.T ...]
-    xlab = [weat_word_set.A ...; weat_word_set.B ...]
+    A = og_cos_mat - new_cos_mat
     diff_bias = Bias.effect_size(og_vec_set...) - Bias.effect_size(new_vec_set...)
     print("WEAT - diff bias: $(round(diff_bias, digits=4))")
-    heatmap(xlab, ylab, og_cos_mat-new_cos_mat, aspect_ratio=1, ticks=:all)
-    xaxis!(xrotation=90)
-    title!("Delta Cossim Matrix")
+    return weat_map(A, weat_word_set, title=title, savefile=savefile,
+                    set_names=set_names)
 end
 
 
@@ -196,7 +238,15 @@ function p(doc_num)
     deltas = GloVe.compute_IF_deltas(text, M, X_weat, all_weat_indices)
     og_weat_vecs = Bias.make_weat_vec_set(M.W, weat_idx_sets[1])
     new_weat_vecs = Bias.make_weat_vec_set(M.W, weat_idx_sets[1], deltas=deltas)
-    plot_delta_weat(og_weat_vecs, new_weat_vecs, Bias.WEAT_WORD_SETS[1])
+    plot_delta_weat(og_weat_vecs, new_weat_vecs, Bias.WEAT_WORD_SETS[1];
+                    savefile="results/heatmaps/weatmap-$doc_num.png",
+                    set_names=(S="male", T="female", A="science", B="arts"))
 end
 
 p(942302)
+
+
+
+plot_weat(Bias.make_weat_vec_set(M.W, weat_idx_sets[1]), Bias.WEAT_WORD_SETS[1],
+          set_names=(S="male", T="female", A="science", B="arts"),
+          savefile="results/heatmaps/weatmap-NYT-WEAT1.png")
