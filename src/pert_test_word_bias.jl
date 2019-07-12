@@ -10,6 +10,16 @@ target = get(ARGS, 1, "C0-V15-W8-D75-R0.05-E300")
 pert_dir = get(ARGS, 2, "results/perturbations")
 embedding_dir = get(ARGS, 3, "embeddings")
 target_biases = get(ARGS, 4, "12")
+test_words_dir = get(ARGS, 5, "etc")
+
+WEAT_TEST_FILES = (science_arts=(S="$test_words_dir/science.txt",
+                                 T="$test_words_dir/arts.txt"),
+                   instruments_weapons=(A="$test_words_dir/pleasant.txt",
+                                        B="$test_words_dir/unpleasant.txt"))
+
+WEAT_TEST_SETS = [make_weat_test_set(Bias.WEAT_WORD_SETS[k], WEAT_TEST_FILES[k],
+                  verbose=true) for k in keys(Bias.WEAT_WORD_SETS)]
+
 
 function main()
     vocab_path = abspath(joinpath(embedding_dir, "vocab-$(split(target, "-W")[1]).txt"))
@@ -17,13 +27,13 @@ function main()
     vocab, ivocab = GloVe.load_vocab(vocab_path)
     V = length(vocab)
 
-    weat_idx_sets = [Bias.get_weat_idx_set(set, vocab) for set in Bias.WEAT_WORD_SETS]
+    weat_idx_sets = [Bias.get_weat_idx_set(set, vocab) for set in WEAT_TEST_SETS]
     all_weat_indices = unique([i for set in weat_idx_sets for inds in set for i in inds])
 
     for j in target_biases
         i = parse(Int, j)
         target_dir = joinpath(pert_dir, target * "-B$i")
-        open(joinpath(target_dir, "true_change_with_baselines.csv"), "w") do out_io
+        open(joinpath(target_dir, "test_word_change.csv"), "w") do out_io
             headers = ["filename", "pert_type", "pert_size", "pert_run", "seed", "trueB̃"]
             println(out_io, join(headers,","))
             # Baselines

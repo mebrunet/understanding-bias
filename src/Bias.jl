@@ -183,3 +183,34 @@ function weighted_effect_size(weat_vec_set::NamedTuple,
 end
 
 end
+
+
+# Helper for making WEAT test sets
+function replace_weat_words(weat_words, filename; verbose=false)
+    if typeof(filename) != String
+        # Nothing to overwrite with
+        verbose && println("Original word set used.")
+        return weat_words
+    end
+    new_words = unique(readlines(filename, keep=false))
+    n = length(new_words)
+    filter!(x->!(x in weat_words), new_words)
+    m = length(new_words)
+    verbose && println("Replaced with $m words. (Removed $(n - m) weat words.)")
+    return Tuple(new_words)
+end
+
+
+# Check changes in embedding bias against synonym WEAT words
+function make_weat_test_set(weat_word_set::NamedTuple, testfiles::NamedTuple;
+                            verbose=false)
+    return (
+    S=replace_weat_words(weat_word_set.S, get(testfiles, :S, nothing),
+                         verbose=verbose),
+    T=replace_weat_words(weat_word_set.T, get(testfiles, :T, nothing),
+                         verbose=verbose),
+    A=replace_weat_words(weat_word_set.A, get(testfiles, :A, nothing),
+                         verbose=verbose),
+    B=replace_weat_words(weat_word_set.B, get(testfiles, :B, nothing),
+                         verbose=verbose))
+end
