@@ -17,7 +17,7 @@ WEAT_TEST_FILES = (science_arts=(S="$test_words_dir/science.txt",
                    instruments_weapons=(A="$test_words_dir/pleasant.txt",
                                         B="$test_words_dir/unpleasant.txt"))
 
-WEAT_TEST_SETS = [make_weat_test_set(Bias.WEAT_WORD_SETS[k], WEAT_TEST_FILES[k],
+WEAT_TEST_SETS = [Bias.make_weat_test_set(Bias.WEAT_WORD_SETS[k], WEAT_TEST_FILES[k],
                   verbose=true) for k in keys(Bias.WEAT_WORD_SETS)]
 
 

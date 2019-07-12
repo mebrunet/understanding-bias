@@ -182,8 +182,6 @@ function weighted_effect_size(weat_vec_set::NamedTuple,
     return (μS - μT) / σ
 end
 
-end
-
 
 # Helper for making WEAT test sets
 function replace_weat_words(weat_words, filename; verbose=false)
@@ -213,4 +211,7 @@ function make_weat_test_set(weat_word_set::NamedTuple, testfiles::NamedTuple;
                          verbose=verbose),
     B=replace_weat_words(weat_word_set.B, get(testfiles, :B, nothing),
                          verbose=verbose))
+end
+
+
 end
