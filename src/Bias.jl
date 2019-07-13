@@ -29,11 +29,15 @@ end
 
 function effect_size(S::AbstractArray, T::AbstractArray, A::AbstractArray,
         B::AbstractArray)
+    # S,T,A,B are |set| by embedding_dim matrices
     Ŝ = normalize_rows(S)
     T̂ = normalize_rows(T)
     Â = normalize_rows(A)
     B̂ = normalize_rows(B)
 
+    # Dot product now equal cosine similarity
+    # e.g. S * A' returns |set S| by |set A| matrix of cossims
+    # mean(S * A') averages out the columns, leaving vec of size |set S|
     μSA = mean(Ŝ * Â', dims=2)
     μSB = mean(Ŝ * B̂', dims=2)
     μTA = mean(T̂ * Â', dims=2)
