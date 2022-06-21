@@ -8,7 +8,7 @@ docutils==0.14
 gensim==3.5.0
 idna==2.7
 jmespath==0.9.3
-numpy==1.15.1
+numpy==1.22.0
 python-dateutil==2.7.3
 requests==2.19.1
 s3transfer==0.1.13
